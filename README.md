@@ -24,6 +24,7 @@ Ensure you have the following installed:
 - Use `pip install` to install any library you miss
 - Step 1: Run server
 ```
+cd blockchain
 python test-data/server.py
 ```
 - Step 2: Run client script
