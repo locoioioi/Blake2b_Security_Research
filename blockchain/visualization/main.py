@@ -1,12 +1,20 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+import argparse
 
 # Define hash algorithms and rounds
-hash_names = ["blake2b", "sha256", "md5", "sha1", "sha3"]
+hash_names = ["blake2b", "blake2s", "blake3", "sha256", "sha512"]
 rounds = [f"round{i}" for i in range(1, 10)]
 base_dir = "test_data/results"
-output_dir = "visualization/image"
+
+# Argument parser to accept parameters
+parser = argparse.ArgumentParser(description="Visualize hash algorithm performance.")
+parser.add_argument("--output", type=str, required=True, help="Output folder for images (e.g., MacOs, Wins)")
+args = parser.parse_args()
+
+# Output directory based on argument
+output_dir = os.path.join("visualization", args.output)
 
 # Ensure output directory exists
 os.makedirs(output_dir, exist_ok=True)
@@ -18,9 +26,10 @@ def load_results(hash_name):
         file_path = os.path.join(base_dir, hash_name, f"{round_name}.txt")
         if os.path.exists(file_path):
             with open(file_path, "r") as file:
-                times = [int(line.strip()) for line in file.readlines()]
-                avg_time = sum(times) / len(times) if times else 0
-                data.append({"Hash": hash_name, "Round": round_name, "AvgTime(ns)": avg_time})
+                times = [int(line.strip()) for line in file.readlines()]  # Read nanoseconds
+                avg_time_ns = sum(times) / len(times) if times else 0
+                avg_time_s = avg_time_ns / 1e9  # Convert nanoseconds to seconds
+                data.append({"Hash": hash_name, "Round": round_name, "AvgTime(s)": avg_time_s})
     return data
 
 # Load results for all hash algorithms
@@ -43,13 +52,13 @@ def visualize_results(dataframe, round_indices, title, filename):
 
     for i, hash_name in enumerate(hash_names):
         subset = dataframe[dataframe["Hash"] == hash_name]
-        avg_times = subset[subset["Round"].isin(filtered_rounds)]["AvgTime(ns)"].values
+        avg_times = subset[subset["Round"].isin(filtered_rounds)]["AvgTime(s)"].values
         plt.bar([p + i * width for p in x], avg_times, width=width, label=hash_name, color=colors[i])
 
     # Add labels and title
     plt.title(title, fontsize=16)
     plt.xlabel("Rounds", fontsize=14)
-    plt.ylabel("Average Execution Time (ns)", fontsize=14)
+    plt.ylabel("Average Execution Time (s)", fontsize=14)  # Update label to seconds
     plt.xticks([p + 2 * width for p in x], filtered_rounds, rotation=45)  # Adjust x-axis ticks
     plt.legend(title="Hash Algorithm")
     plt.grid(axis="y", linestyle="--", alpha=0.7)

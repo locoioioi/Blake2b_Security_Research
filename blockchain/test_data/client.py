@@ -4,7 +4,7 @@ import os
 from config import sender_id, recipient_id, port, tx_endpoint, mining_endpoint, chain_length, tx_amount
 
 # Define the array of hash algorithms
-hash_names = ["blake2b", "sha256", "md5", "sha1", "sha3"]
+hash_names = ["blake3","blake2b", "sha256", "blake2s", "sha512"]
 
 def create_rounds(hash_name):
     """

@@ -3,6 +3,7 @@ import json
 from time import time
 from typing import Dict
 from config import puzzle
+from blake3 import blake3
 
 class Chain:
     def __init__(self): 
@@ -131,3 +132,47 @@ class SHA3Chain(Chain):
     def valid_proof(previous_nonce, nonce):
         guess = f"{previous_nonce}{nonce}".encode('utf-8')
         return hashlib.sha3_256(guess).hexdigest()
+
+
+class Blake3Chain(Chain):
+    def __init__(self):
+        Chain.__init__(self)
+    
+    @staticmethod
+    def hash(block):
+        block_string = json.dumps(block).encode('utf-8')
+        return blake3(block_string).hexdigest()
+    
+    @staticmethod
+    def valid_proof(previous_nonce, nonce):
+        guess = f"{previous_nonce}{nonce}".encode('utf-8')
+        return blake3(guess).hexdigest()
+
+class Blake2sChain(Chain):
+    def __init__(self):
+        Chain.__init__(self)
+    
+    @staticmethod
+    def hash(block):
+        block_string = json.dumps(block).encode('utf-8')
+        return hashlib.blake2s(block_string).hexdigest()
+    
+    @staticmethod
+    def valid_proof(previous_nonce, nonce):
+        guess = f"{previous_nonce}{nonce}".encode('utf-8')
+        return hashlib.blake2s(guess).hexdigest()
+
+
+class SHA512Chain(Chain):
+    def __init__(self):
+        Chain.__init__(self)
+    
+    @staticmethod
+    def hash(block):
+        block_string = json.dumps(block).encode('utf-8')
+        return hashlib.sha512(block_string).hexdigest()
+    
+    @staticmethod
+    def valid_proof(previous_nonce, nonce):
+        guess = f"{previous_nonce}{nonce}".encode('utf-8')
+        return hashlib.sha512(guess).hexdigest()

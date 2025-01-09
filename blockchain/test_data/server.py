@@ -6,7 +6,7 @@ import time
 from typing import ClassVar
 import uvicorn
 
-from chain import (BlakeChain, SHAChain, MD5Chain, SHA1Chain, SHA3Chain)
+from chain import (BlakeChain, SHAChain, MD5Chain, SHA1Chain, SHA3Chain, Blake3Chain,Blake2sChain, Blake2sChain, SHA512Chain)
 from merkle_tree import MerkleTree
 import config as cfg
 
@@ -21,6 +21,12 @@ elif cfg.hash == "sha1":
     blockchain = SHA1Chain()
 elif cfg.hash == "sha3":
     blockchain = SHA3Chain()
+elif cfg.hash == "blake3":
+    blockchain = Blake3Chain()
+elif cfg.hash == "blake2s":
+    blockchain = Blake2sChain()
+elif cfg.hash == "sha512":
+    blockchain = SHA512Chain()
 else:
     raise ValueError("Unsupported hash function")
 

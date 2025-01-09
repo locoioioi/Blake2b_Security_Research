@@ -1,5 +1,6 @@
 import hashlib
 import binascii
+from blake3 import blake3  # Import blake3 library
 
 class MerkleTree(object):
     def __init__(self, hash_type="sha256"):
@@ -8,7 +9,10 @@ class MerkleTree(object):
 
     def set_hash_function(self, hash_type):
         hash_type = hash_type.lower()
-        if hash_type in hashlib.algorithms_available:
+        if hash_type == "blake3":
+            # Explicit support for Blake3
+            self.hash_function = lambda data: blake3(data).digest()
+        elif hash_type in hashlib.algorithms_available:
             self.hash_function = getattr(hashlib, hash_type)
         else:
             raise ValueError(f"Hashing algorithm '{hash_type}' is not supported.")
@@ -29,7 +33,10 @@ class MerkleTree(object):
         for v in values:
             if do_hash:
                 v = v.encode('utf-8')
-                v = self.hash_function(v).hexdigest()
+                if self.hash_function == blake3().digest:  # Special case for Blake3
+                    v = blake3(v).hexdigest()
+                else:
+                    v = self.hash_function(v).hexdigest()
             v = bytearray.fromhex(v)
             self.leaves.append(v)
 
@@ -51,7 +58,10 @@ class MerkleTree(object):
 
         new_level = []
         for l, r in zip(self.levels[0][0:N:2], self.levels[0][1:N:2]):
-            new_level.append(self.hash_function(l + r).digest())
+            if self.hash_function == blake3().digest:  # Special case for Blake3
+                new_level.append(blake3(l + r).digest())
+            else:
+                new_level.append(self.hash_function(l + r).digest())
         if solo_leave is not None:
             new_level.append(solo_leave)
         self.levels = [new_level, ] + self.levels  # Prepend new level
