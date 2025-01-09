@@ -1,17 +1,9 @@
 # Blake2b_Security_Research
 
-# Test Merkle Tree and Hash Algorithms
-
-This repository is designed to test the performance of different hash algorithms used in Merkle tree implementations, visualize their results, and analyze their efficiency in blockchain-related tasks. The repository includes scripts for running a server, simulating client operations, and generating visualization reports.
-
----
-
 ## Features
 
-- Test and compare Merkle tree performance with various hash algorithms (`SHA256`, `Blake2b`, `MD5`, `SHA1`, `SHA3`).
-- Generate reports with execution times for Merkle tree operations.
+- Test and compare Merkle tree performance with various hash algorithms (`SHA256`, `Blake2b`, `Blake3`, `Blake2s`, `SHA512`).
 - Visualize and analyze results with grouped bar charts.
-- **Upcoming**: Test Blake2 with text data.
 
 ---
 
@@ -26,22 +18,41 @@ Ensure you have the following installed:
 
 ## Installation
 
-- Use `pip install` to install any library you miss
-- Step 1: Run server
+- Step 1: Install necessary libraries.
+
+```
+pip install -r requirement.txt
+```
+
+- Step 2: Run server
 
 ```
 cd blockchain/
 python test_data/server.py
 ```
 
-- Step 2: Run client script
+- Step 3: Run client script
 
 ```
 python test_data/client.py
 ```
 
-- Step 3: Generate Visualization Reports
+- Step 4: Generate Visualization Reports
+
+For Windows
 
 ```
 python visualization/main.py --output Windows
+```
+
+For MacOS
+
+```
+python visualization/main.py --output MacOS
+```
+
+For Linux
+
+```
+python visualization/main.py --output Linux
 ```
