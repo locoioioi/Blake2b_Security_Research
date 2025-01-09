@@ -33,7 +33,6 @@ cd blockchain/
 - Step 3: Run server
 
 ```
-
 python test_data/server.py
 ```
 
