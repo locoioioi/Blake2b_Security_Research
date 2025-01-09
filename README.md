@@ -16,7 +16,7 @@ Ensure you have the following installed:
 
 ---
 
-## Installation
+## Run Blockchain Test
 
 - Step 1: Install necessary libraries.
 
@@ -24,20 +24,26 @@ Ensure you have the following installed:
 pip install -r requirement.txt
 ```
 
-- Step 2: Run server
+- Step 2: Access blockchain directory.
 
 ```
 cd blockchain/
+```
+
+- Step 3: Run server
+
+```
+
 python test_data/server.py
 ```
 
-- Step 3: Run client script
+- Step 4: Run client script
 
 ```
 python test_data/client.py
 ```
 
-- Step 4: Generate Visualization Reports
+- Step 5: Generate Visualization Reports
 
 For Windows
 
