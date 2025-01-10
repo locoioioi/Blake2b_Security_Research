@@ -44,20 +44,94 @@ python test_data/client.py
 
 - Step 5: Generate Visualization Reports
 
-For Windows
-
 ```
+python visualization/main.py --output <output_folder>
+
+example
 python visualization/main.py --output Windows
-```
-
-For MacOS
-
-```
 python visualization/main.py --output MacOS
-```
-
-For Linux
-
-```
 python visualization/main.py --output Linux
 ```
+
+---
+
+## Run Test for text input
+
+- Step 1: Access text-input directory.
+
+```
+cd text-input/
+```
+
+- Step 2: Run test to measure the speed among hashing algorithms.
+
+```
+python code/hashing_speed.py --output <output_folder>
+
+example
+python code/hashing_speed.py --output Windows
+python code/hashing_speed.py --output MacOS
+python code/hashing_speed.py --output Linux
+```
+
+- Step 3: Generate Visualization Reports
+
+```
+python visualization/hashing_visualization.py --folder <output_folder>
+
+example
+python visualization/hashing_visualization.py --folder Windows
+python visualization/hashing_visualization.py --folder MacOS
+python visualization/hashing_visualization.py --folder Linux
+```
+
+- Step 4: Run test to measure the resource usage among hashing algorithms.
+
+```
+python code/resource_consumption.py --output <output_folder>
+
+example
+python code/resource_consumption.py --output Windows
+python code/resource_consumption.py --output MacOS
+python code/resource_consumption.py --output Linux
+```
+
+- Step 5: Generate Visualization Reports
+
+```
+python visualization/resource_visualization.py --folder <output_folder>
+
+example
+python visualization/resource_visualization.py --folder Windows
+python visualization/resource_visualization.py --folder MacOS
+python visualization/resource_visualization.py --folder Linux
+```
+
+---
+
+## Final Result
+
+You can access results folder in the source code to observe the result.
+
+    .
+    ├── blockchain
+        ├── test_data
+            ├── results
+            ├── chain.py
+            ├── client.py
+            ├── config.py
+            ├── server.py
+        ├── visualization
+            ├── <output_folder>
+            ├── main.py
+    ├── text-input
+        ├── code
+            ├── data
+            ├── hashing_speed.py
+            ├── resource_consumption.py
+        ├── results
+            ├── <output_folder>
+        ├── visualization
+            ├── <output_folder>
+            ├── hashing_visualization.py
+            ├── resource_visualization.py
