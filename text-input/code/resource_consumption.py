@@ -9,7 +9,7 @@ from blake3 import blake3
 from prettytable import PrettyTable
 
 # Base directories
-data_dir = "code/data"
+data_dir = "code/data/resources"
 default_results_dir = "results"
 
 # Ensure base directories exist
@@ -102,6 +102,7 @@ def perform_statistical_analysis(results):
 
 # Main function
 def main():
+    print("Measuring resource usage...")
     # Argument parser
     parser = argparse.ArgumentParser(description="Measure and analyze resource usage of hashing algorithms.")
     parser.add_argument("--output", type=str, required=True, help="Subdirectory in the results folder to save the results.")
