@@ -4,9 +4,14 @@ import os
 import csv
 import argparse
 import statistics
+from threading import Thread, Lock
+from queue import Queue
 from prettytable import PrettyTable
 from blake3 import blake3
 from scipy.stats import ttest_ind
+
+MAX_ITERATIONS = 5
+MAX_THREADS = 4
 
 # Directories for data and results
 data_dir = "code/data/speed"
@@ -15,6 +20,9 @@ default_results_dir = "results"
 # Ensure directories exist
 os.makedirs(data_dir, exist_ok=True)
 os.makedirs(default_results_dir, exist_ok=True)
+
+# Lock for thread-safe operations
+lock = Lock()
 
 # Generate deterministic datasets for testing
 def generate_deterministic_strings(total, size_mb, reuse=True):
@@ -29,6 +37,18 @@ def generate_deterministic_strings(total, size_mb, reuse=True):
     with open(dataset_file, "w") as file:
         file.writelines(f"{item}\n" for item in data)
     return data
+
+# Worker function for threading
+def worker(queue, results):
+    while not queue.empty():
+        algo, size_mb, iterations = queue.get()
+        try:
+            # Measure hashing speed
+            total_time, avg_time, mbps = measure_hashing_speed(algo, size_mb, iterations)
+            with lock:
+                results.append([algo, size_mb, iterations, total_time, avg_time, mbps])
+        finally:
+            queue.task_done()
 
 # Measure hashing speed
 def measure_hashing_speed(algorithm, data_size_mb, iterations):
@@ -53,13 +73,27 @@ def measure_hashing_speed(algorithm, data_size_mb, iterations):
     mbps = (data_size_mb * iterations) / (end_time - start_time)  # Speed in megabytes per second
     return total_time_ms, avg_time_per_hash, mbps
 
-# Test hashing algorithms
-def test_hashing_algorithms(algorithms, data_sizes_mb, iterations):
+# Test hashing algorithms with multithreading
+def test_hashing_algorithms(algorithms, data_sizes_mb, iterations, num_threads=4):
     results = []
+    threads = []
+    queue = Queue()
+
+    # Enqueue tasks
     for algo in algorithms:
         for size_mb in data_sizes_mb:
-            total_time, avg_time, mbps = measure_hashing_speed(algo, size_mb, iterations)
-            results.append([algo, size_mb, iterations, total_time, avg_time, mbps])
+            queue.put((algo, size_mb, iterations))
+
+    # Start threads
+    for _ in range(num_threads):
+        thread = Thread(target=worker, args=(queue, results))
+        thread.start()
+        threads.append(thread)
+
+    # Wait for all threads to finish
+    for thread in threads:
+        thread.join()
+
     return results
 
 # Perform statistical analysis
@@ -95,9 +129,9 @@ def perform_t_tests(results):
 
 # Main function
 def main():
-    print("Measuring hashing speed...")
+    print("Measuring hashing speed with multithreading...")
     # Argument parser
-    parser = argparse.ArgumentParser(description="Measure and analyze hashing speed.")
+    parser = argparse.ArgumentParser(description="Measure and analyze hashing speed with multithreading.")
     parser.add_argument("--output", type=str, required=True, help="Subdirectory in the results folder to save the results.")
     args = parser.parse_args()
 
@@ -106,14 +140,14 @@ def main():
     # Data sizes to test (MB)
     data_sizes_mb = [1, 2, 4, 8, 16, 32]
     # Fixed number of iterations
-    iterations = 5
+    iterations = MAX_ITERATIONS
 
     # Prepare PrettyTable for terminal output
     table = PrettyTable()
     table.field_names = ["Algorithm", "Data Size (MB)", "Iterations", "Total Time (ms)", "Avg Time (ms)", "Speed (MBps)"]
 
     # Perform tests and record results
-    results = test_hashing_algorithms(algorithms, data_sizes_mb, iterations)
+    results = test_hashing_algorithms(algorithms, data_sizes_mb, iterations, num_threads=MAX_THREADS)
     for result in results:
         table.add_row([result[0], result[1], result[2], f"{result[3]:.3f}", f"{result[4]:.3f}", f"{result[5]:.3f}"])
 

@@ -7,14 +7,23 @@ import statistics
 from scipy.stats import ttest_ind
 from blake3 import blake3
 from prettytable import PrettyTable
+import json
 
 # Base directories
 data_dir = "code/data/resources"
 default_results_dir = "results"
+cache_file = "resource_usage_cache.json"
 
 # Ensure base directories exist
 os.makedirs(data_dir, exist_ok=True)
 os.makedirs(default_results_dir, exist_ok=True)
+
+# Load or initialize cache
+if os.path.exists(cache_file):
+    with open(cache_file, "r") as f:
+        cache = json.load(f)
+else:
+    cache = {}
 
 # Generate deterministic datasets for testing
 def generate_deterministic_datasets(total, size_mb, reuse=True):
@@ -30,8 +39,13 @@ def generate_deterministic_datasets(total, size_mb, reuse=True):
         file.writelines(f"{item}\n" for item in data)
     return data
 
-# Measure resource usage
+# Measure resource usage with caching
 def measure_resource_usage(algorithm, data_size_mb, iterations):
+    # Cache key
+    cache_key = f"{algorithm}-{data_size_mb}-{iterations}"
+    if cache_key in cache:
+        return cache[cache_key]
+
     # Generate deterministic datasets
     data = generate_deterministic_datasets(iterations, data_size_mb)
 
@@ -57,6 +71,8 @@ def measure_resource_usage(algorithm, data_size_mb, iterations):
     # Calculate average CPU usage
     avg_cpu_usage = psutil.cpu_percent(interval=None)
 
+    # Save result to cache
+    cache[cache_key] = (avg_cpu_usage, peak_memory_mb)
     return avg_cpu_usage, peak_memory_mb
 
 # Test resource usage
@@ -68,41 +84,14 @@ def test_resource_usage(algorithms, data_sizes_mb, iterations):
             results.append([algo, size_mb, iterations, avg_cpu, peak_memory])
     return results
 
-# Perform statistical analysis with t-test
-def perform_statistical_analysis(results):
-    stats = []
-    algorithm_results = {algo: [r for r in results if r[0] == algo] for algo in set(r[0] for r in results)}
-
-    # Perform pairwise t-tests
-    algorithms = list(algorithm_results.keys())
-    for i in range(len(algorithms)):
-        for j in range(i + 1, len(algorithms)):
-            algo1 = algorithms[i]
-            algo2 = algorithms[j]
-
-            # CPU usage comparison
-            cpu1 = [r[3] for r in algorithm_results[algo1]]
-            cpu2 = [r[3] for r in algorithm_results[algo2]]
-            t_value_cpu, p_value_cpu = ttest_ind(cpu1, cpu2, equal_var=False)
-
-            # Memory usage comparison
-            mem1 = [r[4] for r in algorithm_results[algo1]]
-            mem2 = [r[4] for r in algorithm_results[algo2]]
-            t_value_mem, p_value_mem = ttest_ind(mem1, mem2, equal_var=False)
-
-            stats.append({
-                "Algorithm 1": algo1,
-                "Algorithm 2": algo2,
-                "T-Value CPU": t_value_cpu,
-                "P-Value CPU": p_value_cpu,
-                "T-Value Memory": t_value_mem,
-                "P-Value Memory": p_value_mem
-            })
-    return stats
+# Save cache to file
+def save_cache():
+    with open(cache_file, "w") as f:
+        json.dump(cache, f)
 
 # Main function
 def main():
-    print("Measuring resource usage...")
+    print("Measuring resource usage with caching...")
     # Argument parser
     parser = argparse.ArgumentParser(description="Measure and analyze resource usage of hashing algorithms.")
     parser.add_argument("--output", type=str, required=True, help="Subdirectory in the results folder to save the results.")
@@ -124,14 +113,10 @@ def main():
     for result in results:
         table.add_row([result[0], result[1], result[2], f"{result[3]:.2f}", f"{result[4]:.2f}"])
 
-    # Perform statistical analysis
-    stats = perform_statistical_analysis(results)
-
     # Write results to CSV
     results_dir = os.path.join(default_results_dir, args.output)
     os.makedirs(results_dir, exist_ok=True)
     results_csv = os.path.join(results_dir, "hashing_resource_results.csv")
-    stats_csv = os.path.join(results_dir, "hashing_resource_statistics.csv")
 
     with open(results_csv, mode='w', newline='') as file:
         writer = csv.writer(file)
@@ -139,19 +124,8 @@ def main():
         for result in results:
             writer.writerow(result)
 
-    with open(stats_csv, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(["Algorithm 1", "Algorithm 2", "T-Value CPU", "P-Value CPU", "T-Value Memory", "P-Value Memory"])
-        for stat in stats:
-            writer.writerow([
-                stat["Algorithm 1"], stat["Algorithm 2"],
-                f"{stat['T-Value CPU']:.2f}", f"{stat['P-Value CPU']:.4f}",
-                f"{stat['T-Value Memory']:.2f}", f"{stat['P-Value Memory']:.4f}"
-            ])
-
     # Output summary
     print(f"Resource results have been written to {results_csv}")
-    print(f"Statistical analysis results have been written to {stats_csv}")
     print(table)
 
 if __name__ == "__main__":
