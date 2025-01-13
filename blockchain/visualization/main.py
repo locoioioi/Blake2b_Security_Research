@@ -6,15 +6,15 @@ import argparse
 # Define hash algorithms and rounds
 hash_names = ["blake2b", "blake2s", "blake3", "sha256", "sha512"]
 rounds = [f"round{i}" for i in range(1, 10)]
-base_dir = "test_data/results"
 
 # Argument parser to accept parameters
 parser = argparse.ArgumentParser(description="Visualize hash algorithm performance.")
-parser.add_argument("--output", type=str, required=True, help="Output folder for images (e.g., MacOs, Wins)")
+parser.add_argument("--folder", type=str, required=True, help="Folder for reading results and saving images (e.g., MacOs, Wins)")
 args = parser.parse_args()
 
-# Output directory based on argument
-output_dir = os.path.join("visualization", args.output)
+# Input and output directories based on argument
+base_dir = os.path.join("test_data/results", args.folder)
+output_dir = os.path.join("visualization", args.folder)
 
 # Ensure output directory exists
 os.makedirs(output_dir, exist_ok=True)

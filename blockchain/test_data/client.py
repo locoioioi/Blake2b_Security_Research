@@ -1,40 +1,34 @@
 import requests
 import time
 import os
+import argparse
 from config import sender_id, recipient_id, port, tx_endpoint, mining_endpoint, chain_length, tx_amount
 
 # Define the array of hash algorithms
-hash_names = ["blake3","blake2b", "sha256", "blake2s", "sha512"]
+hash_names = ["blake3", "blake2b", "sha256", "blake2s", "sha512"]
 
-def create_rounds(hash_name):
+def create_rounds(hash_name, base_results_dir):
     """
-    Create configuration for 9 rounds dynamically based on the hash algorithm.
+    Create configuration for 9 rounds dynamically based on the hash algorithm and base results directory.
     """
     return [
-        {"puzzle": 2, "tx_per_block": 5, "results_file": f"test_data/results/{hash_name}/round1.txt"},
-        {"puzzle": 2, "tx_per_block": 10, "results_file": f"test_data/results/{hash_name}/round2.txt"},
-        {"puzzle": 2, "tx_per_block": 15, "results_file": f"test_data/results/{hash_name}/round3.txt"},
-        {"puzzle": 4, "tx_per_block": 5, "results_file": f"test_data/results/{hash_name}/round4.txt"},
-        {"puzzle": 4, "tx_per_block": 10, "results_file": f"test_data/results/{hash_name}/round5.txt"},
-        {"puzzle": 4, "tx_per_block": 15, "results_file": f"test_data/results/{hash_name}/round6.txt"},
-        {"puzzle": 6, "tx_per_block": 5, "results_file": f"test_data/results/{hash_name}/round7.txt"},
-        {"puzzle": 6, "tx_per_block": 10, "results_file": f"test_data/results/{hash_name}/round8.txt"},
-        {"puzzle": 6, "tx_per_block": 15, "results_file": f"test_data/results/{hash_name}/round9.txt"},
+        {"puzzle": 2, "tx_per_block": 5, "results_file": f"{base_results_dir}/{hash_name}/round1.txt"},
+        {"puzzle": 2, "tx_per_block": 10, "results_file": f"{base_results_dir}/{hash_name}/round2.txt"},
+        {"puzzle": 2, "tx_per_block": 15, "results_file": f"{base_results_dir}/{hash_name}/round3.txt"},
+        {"puzzle": 4, "tx_per_block": 5, "results_file": f"{base_results_dir}/{hash_name}/round4.txt"},
+        {"puzzle": 4, "tx_per_block": 10, "results_file": f"{base_results_dir}/{hash_name}/round5.txt"},
+        {"puzzle": 4, "tx_per_block": 15, "results_file": f"{base_results_dir}/{hash_name}/round6.txt"},
+        {"puzzle": 6, "tx_per_block": 5, "results_file": f"{base_results_dir}/{hash_name}/round7.txt"},
+        {"puzzle": 6, "tx_per_block": 10, "results_file": f"{base_results_dir}/{hash_name}/round8.txt"},
+        {"puzzle": 6, "tx_per_block": 15, "results_file": f"{base_results_dir}/{hash_name}/round9.txt"},
     ]
 
-def clear_prev_result(directory: str): 
+def clear_prev_result(directory: str):
     """
     Clears all files in the specified results directory.
-
-    Args:
-        directory (str): Path to the directory containing results files.
-
-    Returns:
-        str: Message indicating whether the directory was cleared or did not exist.
     """
     try:
         if os.path.exists(directory):
-            # Remove all files in the directory
             for file_name in os.listdir(directory):
                 file_path = os.path.join(directory, file_name)
                 if os.path.isfile(file_path):
@@ -44,15 +38,10 @@ def clear_prev_result(directory: str):
             return f"Results directory '{directory}' does not exist."
     except Exception as e:
         return f"Error clearing results directory: {e}"
+
 def run_round(round_number, puzzle, tx_per_block, results_file):
     """
     Simulate mining and transaction processing for a single round.
-
-    Args:
-        round_number (int): Current round number.
-        puzzle (int): Puzzle difficulty.
-        tx_per_block (int): Number of transactions per block.
-        results_file (str): Path to save results for this round.
     """
     print(f"Running Round {round_number}")
     print(f"Puzzle difficulty: {puzzle}, Transactions per block: {tx_per_block}")
@@ -80,10 +69,7 @@ def run_round(round_number, puzzle, tx_per_block, results_file):
             response_data = res.json()
 
             # Extract mining time
-            time_took = response_data.get('time took(ns)')
-            if time_took is None:
-                print(f"Warning: 'time took(ns)' key not found in response: {response_data}")
-                time_took = "N/A"
+            time_took = response_data.get('time took(ns)', "N/A")
 
             # Write mining time to the results file
             with open(results_file, "a") as file:
@@ -94,15 +80,22 @@ def run_round(round_number, puzzle, tx_per_block, results_file):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run mining and transaction simulations for various hash algorithms.")
+    parser.add_argument("--results_dir", type=str, required=True, help="Subdirectory name appended to the base path 'test_data/results/'.")
+    args = parser.parse_args()
+
+    # Construct the base results directory
+    base_results_dir = os.path.join("test_data/results", args.results_dir)
+
     # Iterate over all hash algorithms
     for hash_name in hash_names:
         print(f"Processing hash: {hash_name}")
-        rounds = create_rounds(hash_name)
+        rounds = create_rounds(hash_name, base_results_dir)
 
         # Clear all previous results for the current hash type
-        clear_message = clear_prev_result(f"test_data/results/{hash_name}")
+        clear_message = clear_prev_result(f"{base_results_dir}/{hash_name}")
         print(clear_message)
-        
+
         # Run all 9 rounds for the current hash algorithm
         for i, round_config in enumerate(rounds, start=1):
             run_round(i, round_config["puzzle"], round_config["tx_per_block"], round_config["results_file"])
