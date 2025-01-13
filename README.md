@@ -57,24 +57,47 @@ python visualization/main.py --output Linux
 
 ## Run Test for text input
 
-- Step 1: Access text-input directory.
+- Step 1: Unzip the data folder
 
 ```
-cd text-input/
+cd text-input/code
+unzip data.zip
 ```
 
-- Step 2: Run test to measure the speed among hashing algorithms.
+- Step 2: cd back to text-input directory.
 
 ```
-python code/hashing_speed.py --output <output_folder>
+cd ..
+
+pwd
+> text-input/
+```
+
+! Important: your current directory must be text-input
+
+- Step 3: Run test to measure the speed among hashing algorithms in single thread.
+
+```
+python code/hashing/hashing_speed.py --output <output_folder>
 
 example
-python code/hashing_speed.py --output Windows
-python code/hashing_speed.py --output MacOS
-python code/hashing_speed.py --output Linux
+python code/hashing/hashing_speed.py --output Windows
+python code/hashing/hashing_speed.py --output MacOS
+python code/hashing/hashing_speed.py --output Linux
 ```
 
-- Step 3: Generate Visualization Reports
+- Step 4: Run test to measure the speed among hashing algorithms in multi thread.
+
+```
+python code/hashing/hashing_speed_multithread.py --output <output_folder>
+
+example
+python code/hashing/hashing_speed_multithread.py --output Windows
+python code/hashing/hashing_speed_multithread.py --output MacOS
+python code/hashing/hashing_speed_multithread.py --output Linux
+```
+
+- Step 5: Generate Visualization Reports
 
 ```
 python visualization/hashing_visualization.py --folder <output_folder>
@@ -88,12 +111,12 @@ python visualization/hashing_visualization.py --folder Linux
 - Step 4: Run test to measure the resource usage among hashing algorithms.
 
 ```
-python code/resource_consumption.py --output <output_folder>
+python code/resource_usage/resource_consumption.py --output <output_folder>
 
 example
-python code/resource_consumption.py --output Windows
-python code/resource_consumption.py --output MacOS
-python code/resource_consumption.py --output Linux
+python code/resource_usage/resource_consumption.py --output Windows
+python code/resource_usage/resource_consumption.py --output MacOS
+python code/resource_usage/resource_consumption.py --output Linux
 ```
 
 - Step 5: Generate Visualization Reports
@@ -127,11 +150,18 @@ You can access results folder in the source code to observe the result.
     ├── text-input
         ├── code
             ├── data
-            ├── hashing_speed.py
-            ├── resource_consumption.py
+            ├── hashing
+                ├── hashing_speed.py
+                ├── hashing_speed_multithread.py
+            ├── resource_usage
+                ├── resource_consumption.py
         ├── results
             ├── <output_folder>
+                ├── hashing
+                ├── resource_usage
         ├── visualization
             ├── <output_folder>
+                ├── hashing
+                ├── resource_usage
             ├── hashing_visualization.py
             ├── resource_visualization.py
