@@ -28,8 +28,7 @@ def load_results(hash_name):
             with open(file_path, "r") as file:
                 times = [int(line.strip()) for line in file.readlines()]  # Read nanoseconds
                 avg_time_ns = sum(times) / len(times) if times else 0
-                avg_time_s = avg_time_ns / 1e9  # Convert nanoseconds to seconds
-                data.append({"Hash": hash_name, "Round": round_name, "AvgTime(s)": avg_time_s})
+                data.append({"Hash": hash_name, "Round": round_name, "AvgTime(ns)": avg_time_ns})
     return data
 
 # Load results for all hash algorithms
@@ -52,13 +51,13 @@ def visualize_results(dataframe, round_indices, title, filename):
 
     for i, hash_name in enumerate(hash_names):
         subset = dataframe[dataframe["Hash"] == hash_name]
-        avg_times = subset[subset["Round"].isin(filtered_rounds)]["AvgTime(s)"].values
+        avg_times = subset[subset["Round"].isin(filtered_rounds)]["AvgTime(ns)"].values
         plt.bar([p + i * width for p in x], avg_times, width=width, label=hash_name, color=colors[i])
 
     # Add labels and title
     plt.title(title, fontsize=16)
     plt.xlabel("Rounds", fontsize=14)
-    plt.ylabel("Average Execution Time (s)", fontsize=14)  # Update label to seconds
+    plt.ylabel("Average Execution Time (ns)", fontsize=14)  # Update label to nanoseconds
     plt.xticks([p + 2 * width for p in x], filtered_rounds, rotation=45)  # Adjust x-axis ticks
     plt.legend(title="Hash Algorithm")
     plt.grid(axis="y", linestyle="--", alpha=0.7)
@@ -72,11 +71,11 @@ def visualize_results(dataframe, round_indices, title, filename):
 
 # Generate and save visualizations
 visualize_results(df, round_indices=range(0, 3), 
-                  title="Execution Time (Rounds 1-3)", 
+                  title="Execution Time in Nanoseconds (Rounds 1-3)", 
                   filename="rounds_1_to_3.png")
 visualize_results(df, round_indices=range(3, 6), 
-                  title="Execution Time (Rounds 4-6)", 
+                  title="Execution Time in Nanoseconds (Rounds 4-6)", 
                   filename="rounds_4_to_6.png")
 visualize_results(df, round_indices=range(6, 9), 
-                  title="Execution Time (Rounds 7-9)", 
+                  title="Execution Time in Nanoseconds (Rounds 7-9)", 
                   filename="rounds_7_to_9.png")

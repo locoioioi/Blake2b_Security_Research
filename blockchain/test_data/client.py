@@ -44,7 +44,6 @@ def clear_prev_result(directory: str):
             return f"Results directory '{directory}' does not exist."
     except Exception as e:
         return f"Error clearing results directory: {e}"
-
 def run_round(round_number, puzzle, tx_per_block, results_file):
     """
     Simulate mining and transaction processing for a single round.
@@ -65,8 +64,8 @@ def run_round(round_number, puzzle, tx_per_block, results_file):
     os.makedirs(results_dir, exist_ok=True)
 
     # Mining and transaction simulation
-    for block in range(chain_length):  # Increased chain_length
-        for tx in range(tx_per_block):  # Increased tx_per_block
+    for block in range(chain_length):  # Iterate through blocks in the chain
+        for tx in range(tx_per_block):  # Simulate transactions per block
             data = {'sender': sender_id, 'recipient': recipient_id, 'amount': tx_amount}
             try:
                 res = requests.post(f'http://localhost:{port}{tx_endpoint}', json=data)
@@ -75,13 +74,24 @@ def run_round(round_number, puzzle, tx_per_block, results_file):
                 print(f"Error during transaction: {e}")
 
         try:
+            # Perform mining
             res = requests.get(f'http://localhost:{port}{mining_endpoint}')
             res.raise_for_status()
-            # Write mining time to results file
+            response_data = res.json()
+
+            # Extract mining time
+            time_took = response_data.get('time took(ns)')
+            if time_took is None:
+                print(f"Warning: 'time took(ns)' key not found in response: {response_data}")
+                time_took = "N/A"
+
+            # Write mining time to the results file
             with open(results_file, "a") as file:
-                file.write(str(res.json().get('time took(ns)', 'N/A')) + "\n")
+                file.write(f"{time_took}\n")
+
         except requests.exceptions.RequestException as e:
             print(f"Error during mining: {e}")
+
 
 if __name__ == "__main__":
     # Iterate over all hash algorithms

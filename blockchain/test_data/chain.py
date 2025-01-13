@@ -20,7 +20,7 @@ class Chain:
                 'hash': header,
                 'guess_hash': guess_hash,
                 'nonce': nonce,
-                'merkle_root': merkle_root,
+                'merkle_root': merkle_root, 
                 'previous_hash': previous_hash or self.hash(self.chain[-1]['hash']),
         }
 

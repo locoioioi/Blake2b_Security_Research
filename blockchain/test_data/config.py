@@ -13,7 +13,7 @@ tx_amount = 200  # Increased transaction amount
 port = 4544
 tx_endpoint = "/tx/new"
 mining_endpoint = "/mine"
-results_file = "test_data/results/sha256/round3.txt"
+results_file = "test_data/results"
 
 """
 always 10 blocks

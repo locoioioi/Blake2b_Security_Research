@@ -44,7 +44,7 @@ app = FastAPI()
 @app.get('/mine')
 def mine(): 
     try:
-        minig_start = time.time_ns()
+        mining_start = time.time_ns()
         last_block = blockchain.last_block
         last_nonce = last_block['nonce']
         nonce, guess_hash = blockchain.proof_of_work(last_nonce)
@@ -62,15 +62,9 @@ def mine():
         merkle_tree.make_tree()
         merkle_root = merkle_tree.get_merkle_root()
         block = blockchain.new_block(guess_hash, merkle_root, nonce, previous_hash)
-        time_took = time.time_ns() - minig_start
-
-        # Write mining time to results file
-        try:
-            with open(cfg.results_file, "a") as res_file:
-                res_file.write(str(time_took) + "\n")
-        except Exception as file_error:
-            return {"error": "Failed to write to results file"}
-
+        time_took = time.time_ns() - mining_start
+        
+        print(time_took)
         # Prepare response
         response = {
             'message': 'New block added',
@@ -81,6 +75,8 @@ def mine():
             'merkle_root': block['merkle_root'],
             'previous_hash': block['previous_hash'],
         }
+        
+        print(response)
 
         # Reset the Merkle tree for the next block
         merkle_tree.reset_tree()
