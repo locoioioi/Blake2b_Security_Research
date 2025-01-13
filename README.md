@@ -39,18 +39,23 @@ python test_data/server.py
 - Step 4: Run client script
 
 ```
-python test_data/client.py
+python test_data/client.py --results_dir <result_directory>
+
+for example
+python test_data/client.py --results_dir Windows
+python test_data/client.py --results_dir Linux
+python test_data/client.py --results_dir MacOS
 ```
 
 - Step 5: Generate Visualization Reports
 
 ```
-python visualization/main.py --output <output_folder>
+python visualization/main.py --folder <output_folder>
 
 example
-python visualization/main.py --output Windows
-python visualization/main.py --output MacOS
-python visualization/main.py --output Linux
+python visualization/main.py --folder Windows
+python visualization/main.py --folder MacOS
+python visualization/main.py --folder Linux
 ```
 
 ---
