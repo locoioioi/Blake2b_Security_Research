@@ -7,6 +7,10 @@ from blake3 import blake3
 from scipy.stats import ttest_ind
 import pandas as pd
 import time
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Base directories
 data_dir = "code/data/resources"
@@ -16,18 +20,22 @@ default_results_dir = "results"
 os.makedirs(data_dir, exist_ok=True)
 os.makedirs(default_results_dir, exist_ok=True)
 
+
 def create_random_binary_file(file_name: str, size_in_bytes: int, chunk_size: int = 64 * 1024):
     """
     Create a random binary file in chunks to avoid memory overflow.
     """
-    with open(file_name, 'wb') as binary_file:
-        bytes_written = 0
-        while bytes_written < size_in_bytes:
-            remaining_bytes = size_in_bytes - bytes_written
-            binary_file.write(os.urandom(min(chunk_size, remaining_bytes)))
-            bytes_written += min(chunk_size, remaining_bytes)
+    try:
+        with open(file_name, 'wb') as binary_file:
+            bytes_written = 0
+            while bytes_written < size_in_bytes:
+                remaining_bytes = size_in_bytes - bytes_written
+                binary_file.write(os.urandom(min(chunk_size, remaining_bytes)))
+                bytes_written += min(chunk_size, remaining_bytes)
+        logging.info(f"Created file: {file_name} with size: {size_in_bytes // (1024 * 1024)} MB")
+    except Exception as e:
+        logging.error(f"Error creating file {file_name}: {e}")
 
-    print(f"Created file: {file_name} with size: {size_in_bytes // (1024 * 1024)} MB")
 
 def generate_files_for_multiple_sizes(data_sizes_mb, output_folder):
     """
@@ -39,68 +47,86 @@ def generate_files_for_multiple_sizes(data_sizes_mb, output_folder):
         if not os.path.exists(file_path):
             create_random_binary_file(file_path, size_mb * 1024 * 1024)
 
+
 def ensure_data_files_exist():
     """
     Ensure all required files exist in the data directory.
     """
-    file_sizes_mb = [1, 2, 4, 8, 16, 32, 64, 128, 200, 512]  # List of file sizes in MB
+    file_sizes_mb = [1, 2, 4, 8, 16, 32, 64, 128, 200, 512]
     generate_files_for_multiple_sizes(file_sizes_mb, data_dir)
 
-# Measure resource usage with caching
+
+import time
+
 def measure_resource_usage(algorithm, data_size_mb, iterations):
-    # Generate deterministic binary file
+    """
+    Measure CPU and memory usage for a given hashing algorithm and data size.
+    """
     ensure_data_files_exist()
     file_path = os.path.join(data_dir, f"dataset_{data_size_mb}MB.bin")
 
-    # Select the hashing algorithm
+    if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
+        logging.error(f"File not found or empty: {file_path}")
+        return [], 0
+
     if algorithm == "blake3":
         hash_function = lambda x: blake3(x).digest()
     else:
         hash_function = lambda x: hashlib.new(algorithm, x).digest()
 
-    # Get the current process
     process = psutil.Process(os.getpid())
-
-    # Track peak memory usage
     peak_memory_mb = 0
-
-    # Perform hashing and monitor memory
     cpu_usages = []
+
     for _ in range(iterations):
-        start_time = time.time()
-        with open(file_path, "rb") as file:
-            while chunk := file.read(8192):  # Read file in 8KB chunks
-                hash_function(chunk)
-        elapsed_time = time.time() - start_time
+        try:
+            start_time = time.time()
+            with open(file_path, "rb") as file:
+                while chunk := file.read(8192):  # Read file in 8KB chunks
+                    hash_function(chunk)
 
-        # Record CPU usage
-        cpu_usage = psutil.cpu_percent(interval=None)
-        cpu_usages.append(cpu_usage)
+            elapsed_time = time.time() - start_time
+            logging.info(f"Iteration completed in {elapsed_time:.6f} seconds for {data_size_mb} MB with {algorithm}")
 
-        # Check current memory usage
-        current_memory_mb = process.memory_info().rss / (1024 * 1024)  # Memory in MB
-        peak_memory_mb = max(peak_memory_mb, current_memory_mb)
+            # Add a short delay before measuring CPU usage
+            time.sleep(2)  # 100 milliseconds delay
+
+            # Measure CPU usage with a short interval
+            cpu_usage = psutil.cpu_percent(interval=2)
+            cpu_usages.append(cpu_usage)
+
+            # Check memory usage
+            current_memory_mb = process.memory_info().rss / (1024 * 1024)
+            peak_memory_mb = max(peak_memory_mb, current_memory_mb)
+
+        except Exception as e:
+            logging.error(f"Error during resource measurement: {e}")
+            continue
 
     return cpu_usages, peak_memory_mb
 
-# Test resource usage
+
 def test_resource_usage(algorithms, data_sizes_mb, iterations):
+    """
+    Test resource usage for multiple algorithms and file sizes.
+    """
     results = []
     for algo in algorithms:
         for size_mb in data_sizes_mb:
+            logging.info(f"Testing {algo} with {size_mb} MB")
             cpu_usages, peak_memory = measure_resource_usage(algo, size_mb, iterations)
             for cpu in cpu_usages:
-                results.append([algo, size_mb, cpu, peak_memory])
+                results.append([algo, size_mb, round(cpu, 6), round(peak_memory, 6)])
     return results
 
-# Perform T-tests
+
 def perform_t_tests(results_csv, output_folder):
+    """
+    Perform T-tests between different hashing algorithms and save results.
+    """
     df = pd.read_csv(results_csv)
     data_sizes = df["Data Size (MB)"].unique()
-
-    # Algorithm pairs to compare
     comparison_pairs = [("blake3", "sha256"), ("blake2s", "blake2b")]
-
     t_test_results = []
 
     for size in data_sizes:
@@ -115,64 +141,61 @@ def perform_t_tests(results_csv, output_folder):
                     "Data Size (MB)": size,
                     "Algorithm 1": algo1,
                     "Algorithm 2": algo2,
-                    "T-Statistic": round(t_stat, 4),
-                    "P-Value": round(p_value, 6)
+                    "T-Statistic": round(t_stat, 8),
+                    "P-Value": round(p_value, 8)
                 })
 
-    # Save T-test results to CSV
     t_test_output = os.path.join(output_folder, "hashing_resource_t_test_results.csv")
     pd.DataFrame(t_test_results).to_csv(t_test_output, index=False)
-    print(f"T-test results saved to {t_test_output}")
+    logging.info(f"T-test results saved to {t_test_output}")
 
-# Calculate averages and save to another CSV
+
 def calculate_averages(input_csv, output_folder):
+    """
+    Calculate averages of CPU usage and memory usage and save results.
+    """
     df = pd.read_csv(input_csv)
-
     avg_df = (
         df.groupby(["Algorithm", "Data Size (MB)"])
-        .agg(Average_CPU_Usage=("CPU (%)", "mean"), Peak_Memory=("Peak Memory (MB)", "mean"))
+        .agg(Average_CPU_Usage=("CPU (%)", lambda x: round(x.mean(), 6)),
+             Peak_Memory=("Peak Memory (MB)", lambda x: round(x.mean(), 6)))
         .reset_index()
     )
-
     avg_csv = os.path.join(output_folder, "hashing_resource_avg_results.csv")
     avg_df.to_csv(avg_csv, index=False)
+    logging.info(f"Average results saved to {avg_csv}")
 
-# Main function
+
 def main():
-    print("Measuring resource usage with binary test data...")
-    # Argument parser
+    """
+    Main function to orchestrate the resource usage measurement.
+    """
+    logging.info("Starting resource usage measurement...")
     parser = argparse.ArgumentParser(description="Measure and analyze resource usage of hashing algorithms.")
     parser.add_argument("--output", type=str, required=True, help="Subdirectory in the results folder to save the results.")
     args = parser.parse_args()
 
-    # Algorithms to test
     algorithms = ['md5', 'sha1', 'sha256', 'sha512', 'sha3_256', 'blake2s', 'blake2b', 'blake3']
-    # Data sizes to test (MB)
     data_sizes_mb = [1, 2, 4, 8, 16, 32, 64, 128, 200, 512]
-    # Fixed number of iterations
-    iterations = 5
+    iterations = 1
 
-    # Perform tests
     results = test_resource_usage(algorithms, data_sizes_mb, iterations)
-
-    # Write results to CSV
-    results_dir = os.path.join(default_results_dir, args.output) + "/resource_usage"
+    results_dir = os.path.join(default_results_dir, args.output, "resource_usage")
     os.makedirs(results_dir, exist_ok=True)
     results_csv = os.path.join(results_dir, "hashing_resource_results.csv")
 
-    with open(results_csv, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(["Algorithm", "Data Size (MB)", "CPU (%)", "Peak Memory (MB)"])
-        for result in results:
-            writer.writerow(result)
+    try:
+        with open(results_csv, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["Algorithm", "Data Size (MB)", "CPU (%)", "Peak Memory (MB)"])
+            writer.writerows(results)
+        logging.info(f"Resource results saved to {results_csv}")
+    except Exception as e:
+        logging.error(f"Error saving results: {e}")
 
-    print(f"Resource results have been written to {results_csv}")
-
-    # Perform T-tests on the results
     perform_t_tests(results_csv, results_dir)
-
-    # Calculate averages and save to CSV
     calculate_averages(results_csv, results_dir)
+
 
 if __name__ == "__main__":
     main()
