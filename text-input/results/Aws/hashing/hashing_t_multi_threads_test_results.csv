@@ -1,0 +1,21 @@
+Data Size (MB),Algorithm 1,Algorithm 2,T-Statistic,P-Value
+1,blake3,sha256,-1.9876,0.117758
+1,blake2s,blake2b,0.514,0.621183
+2,blake3,sha256,-6.8775,0.002277
+2,blake2s,blake2b,0.6206,0.55229
+4,blake3,sha256,-7.1927,0.000287
+4,blake2s,blake2b,1.3853,0.215957
+8,blake3,sha256,-7.5733,0.000283
+8,blake2s,blake2b,2.7603,0.02819
+16,blake3,sha256,-6.6764,0.001647
+16,blake2s,blake2b,1.7703,0.116088
+32,blake3,sha256,-20.6945,0.0
+32,blake2s,blake2b,4.2177,0.003319
+64,blake3,sha256,-9.4679,0.000584
+64,blake2s,blake2b,3.9323,0.007196
+128,blake3,sha256,-5.4674,0.00497
+128,blake2s,blake2b,16.9606,8e-06
+200,blake3,sha256,-7.0944,0.001509
+200,blake2s,blake2b,11.4613,4e-06
+512,blake3,sha256,-1.5515,0.194661
+512,blake2s,blake2b,0.6869,0.517003
