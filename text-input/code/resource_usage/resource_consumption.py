@@ -3,7 +3,6 @@ import psutil
 import os
 import csv
 import argparse
-import subprocess
 from blake3 import blake3
 from scipy.stats import ttest_ind
 import pandas as pd
@@ -17,26 +16,41 @@ default_results_dir = "results"
 os.makedirs(data_dir, exist_ok=True)
 os.makedirs(default_results_dir, exist_ok=True)
 
-# Generate deterministic binary datasets using fsutil
-def generate_deterministic_files(size_mb):
-    size_bytes = size_mb * 1024 * 1024  # Convert MB to bytes
-    file_path = os.path.join(data_dir, f"dataset_{size_mb}MB.bin")
+def create_random_binary_file(file_name: str, size_in_bytes: int, chunk_size: int = 64 * 1024):
+    """
+    Create a random binary file in chunks to avoid memory overflow.
+    """
+    with open(file_name, 'wb') as binary_file:
+        bytes_written = 0
+        while bytes_written < size_in_bytes:
+            remaining_bytes = size_in_bytes - bytes_written
+            binary_file.write(os.urandom(min(chunk_size, remaining_bytes)))
+            bytes_written += min(chunk_size, remaining_bytes)
 
-    if os.path.exists(file_path):
-        return file_path
+    print(f"Created file: {file_name} with size: {size_in_bytes // (1024 * 1024)} MB")
 
-    try:
-        subprocess.run(["fsutil", "file", "createnew", file_path, str(size_bytes)], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error creating dataset with fsutil: {e}")
-        raise
+def generate_files_for_multiple_sizes(data_sizes_mb, output_folder):
+    """
+    Generate binary files of specified sizes in MB.
+    """
+    os.makedirs(output_folder, exist_ok=True)
+    for size_mb in data_sizes_mb:
+        file_path = os.path.join(output_folder, f"dataset_{size_mb}MB.bin")
+        if not os.path.exists(file_path):
+            create_random_binary_file(file_path, size_mb * 1024 * 1024)
 
-    return file_path
+def ensure_data_files_exist():
+    """
+    Ensure all required files exist in the data directory.
+    """
+    file_sizes_mb = [1, 2, 4, 8, 16, 32, 64, 128, 200, 512]  # List of file sizes in MB
+    generate_files_for_multiple_sizes(file_sizes_mb, data_dir)
 
 # Measure resource usage with caching
 def measure_resource_usage(algorithm, data_size_mb, iterations):
     # Generate deterministic binary file
-    file_path = generate_deterministic_files(data_size_mb)
+    ensure_data_files_exist()
+    file_path = os.path.join(data_dir, f"dataset_{data_size_mb}MB.bin")
 
     # Select the hashing algorithm
     if algorithm == "blake3":

@@ -7,3 +7,4 @@ scipy
 prettytable
 matplotlib
 pandas
+requests

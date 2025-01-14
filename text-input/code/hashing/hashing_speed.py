@@ -1,7 +1,6 @@
 import hashlib
 import time
 import os
-import csv
 import argparse
 from blake3 import blake3
 from scipy.stats import ttest_ind
@@ -11,34 +10,62 @@ import pandas as pd
 MAX_ITERATIONS = 5
 RUNS_PER_TEST = 5  # Number of runs for averaging and statistical testing
 CHUNK_SIZE = 64 * 1024  # 64KB
+
 data_dir = "code/data/speed"
 results_dir = "results"
 
 os.makedirs(data_dir, exist_ok=True)
 os.makedirs(results_dir, exist_ok=True)
 
-# Generate deterministic datasets using fsutil
-def generate_deterministic_files(total, size_mb):
-    size_bytes = size_mb * 1024 * 1024  # Convert MB to Bytes
-    file_path = os.path.join(data_dir, f"dataset_{size_mb}MB_{total}.bin")
+def create_random_binary_file(file_name: str, size_in_bytes: int, chunk_size: int = 64 * 1024):
+    """
+    Create a random binary file in chunks to avoid memory overflow.
+    """
+    with open(file_name, 'wb') as binary_file:
+        bytes_written = 0
+        while bytes_written < size_in_bytes:
+            remaining_bytes = size_in_bytes - bytes_written
+            binary_file.write(os.urandom(min(chunk_size, remaining_bytes)))
+            bytes_written += min(chunk_size, remaining_bytes)
 
-    # Check if the file already exists
-    if os.path.exists(file_path):
-        return file_path
+    print(f"Created file: {file_name} with size: {size_in_bytes // (1024 * 1024)} MB")
 
-    # Use fsutil to create the file
-    os.system(f"fsutil file createnew {file_path} {size_bytes}")
-    return file_path
+def generate_mb_file_sizes():
+    """
+    Generate a list of file sizes in MB.
+    """
+    sizes_in_mb = [1, 2, 4, 8, 16, 32, 64, 128, 200, 512]# File sizes in MB
+    return sizes_in_mb
 
-# Warm-up function
+def generate_files_for_multiple_sizes(data_sizes_mb, output_folder):
+    """
+    Generate binary files of specified sizes in MB.
+    """
+    os.makedirs(output_folder, exist_ok=True)
+    for size_mb in data_sizes_mb:
+        file_path = os.path.join(output_folder, f"random_{size_mb}MB.bin")
+        if not os.path.exists(file_path):
+            create_random_binary_file(file_path, size_mb * 1024 * 1024)
+
+def ensure_data_files_exist(data_sizes_mb):
+    """
+    Ensure all required files exist in the data directory.
+    """
+    generate_files_for_multiple_sizes(data_sizes_mb, data_dir)
+
 def warm_up(file_path, hash_function):
+    """
+    Warm-up phase to preload the hashing mechanism.
+    """
     with open(file_path, "rb") as file:
         while chunk := file.read(CHUNK_SIZE):  # Read file in 64KB chunks
             hash_function(chunk)
 
-# Measure hashing speed
 def measure_hashing_speed(algorithm, data_size_mb, iterations):
-    file_path = generate_deterministic_files(iterations, data_size_mb)
+    """
+    Measure the hashing speed for a specific algorithm and file.
+    """
+    file_path = os.path.join(data_dir, f"random_{data_size_mb}MB.bin")
 
     if algorithm == "blake3":
         hash_function = lambda x: blake3(x).digest()
@@ -62,8 +89,10 @@ def measure_hashing_speed(algorithm, data_size_mb, iterations):
     speed = (data_size_mb * iterations * RUNS_PER_TEST) / (total_time / 1000)  # MBps
     return timings, total_time, avg_time, speed
 
-# Perform single-threaded test
 def test_singlethread(algorithms, data_sizes_mb, iterations, output_folder):
+    """
+    Perform single-threaded hashing tests.
+    """
     timing_results = []
     summary_results = []
 
@@ -93,8 +122,10 @@ def test_singlethread(algorithms, data_sizes_mb, iterations, output_folder):
     pd.DataFrame(summary_results, columns=["Algorithm", "Data Size (MB)", "Iterations", "Total Time (ms)", "Avg Time (ms)", "Speed (MBps)"]).to_csv(summary_csv, index=False)
     print(f"Summary results saved to {summary_csv}")
 
-# Perform T-tests
 def perform_t_tests(timing_csv, output_folder):
+    """
+    Perform T-tests on timing results for algorithm comparisons.
+    """
     df = pd.read_csv(timing_csv)
     data_sizes = df["Data Size (MB)"].unique()
 
@@ -123,7 +154,6 @@ def perform_t_tests(timing_csv, output_folder):
     pd.DataFrame(t_test_results).to_csv(t_test_output, index=False)
     print(f"T-test results saved to {t_test_output}")
 
-# Main function
 def main():
     parser = argparse.ArgumentParser(description="Run single-threaded hashing speed test and save results to CSV.")
     parser.add_argument("--output", type=str, required=True, help="Output subdirectory under ./results/")
@@ -133,10 +163,15 @@ def main():
     os.makedirs(output_folder, exist_ok=True)
 
     algorithms = ['md5', 'sha1', 'sha256', 'sha512', 'sha3_256', 'blake2s', 'blake2b', 'blake3']
-    data_sizes_mb = [1, 2, 4, 8, 16, 32, 64, 128, 200, 512]
+    data_sizes_mb = generate_mb_file_sizes()
     iterations = MAX_ITERATIONS
 
     print("Running single-threaded hashing test...")
+
+    # Ensure data files exist
+    ensure_data_files_exist(data_sizes_mb)
+
+    # Perform tests
     test_singlethread(algorithms, data_sizes_mb, iterations, output_folder)
 
     # Perform T-tests
